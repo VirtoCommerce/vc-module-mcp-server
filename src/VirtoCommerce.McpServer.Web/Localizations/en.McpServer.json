@@ -1,0 +1,24 @@
+{
+  "McpServer": {
+    "blades": {
+      "hello-world": {
+        "title": "Hello world blade"
+      }
+    }
+  },
+  "permissions": {
+    "McpServer:access": "Open McpServer menu",
+    "McpServer:create": "Create McpServer related data",
+    "McpServer:read": "View McpServer related data",
+    "McpServer:update": "Update McpServer related data",
+    "McpServer:delete": "Delete McpServer related data"
+  },
+  "settings": {
+    "McpServer": {
+      "Enabled": {
+        "title": "McpServer Enabled",
+        "description": "McpServer Enabled setting"
+      }
+    }
+  }
+}
