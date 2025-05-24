@@ -1,10 +1,23 @@
 # VirtoCommerce MCP Server Module
 
+> **⚠️ PROTOTYPE / IN DEVELOPMENT**
+>
+> This module is currently in **early development stage** and should be considered a **prototype**.
+> Many features are not yet implemented and the API may change significantly.
+> **Not recommended for production use.**
+
 [![CI](https://github.com/VirtoCommerce/vc-module-mcp-server/workflows/CI/badge.svg?branch=dev)](https://github.com/VirtoCommerce/vc-module-mcp-server/actions?query=workflow%3ACI) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=VirtoCommerce_vc-module-mcp-server&metric=alert_status&branch=dev)](https://sonarcloud.io/dashboard?id=VirtoCommerce_vc-module-mcp-server) [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=VirtoCommerce_vc-module-mcp-server&metric=reliability_rating&branch=dev)](https://sonarcloud.io/dashboard?id=VirtoCommerce_vc-module-mcp-server) [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=VirtoCommerce_vc-module-mcp-server&metric=security_rating&branch=dev)](https://sonarcloud.io/dashboard?id=VirtoCommerce_vc-module-mcp-server) [![Sqale Rating](https://sonarcloud.io/api/project_badges/measure?project=VirtoCommerce_vc-module-mcp-server&metric=sqale_rating&branch=dev)](https://sonarcloud.io/dashboard?id=VirtoCommerce_vc-module-mcp-server)
 
 ## Overview
 
-The VirtoCommerce MCP Server module provides a **Model Context Protocol (MCP)** server implementation that enables AI applications and Large Language Models (LLMs) to interact with VirtoCommerce APIs through a standardized interface.
+**🚧 Development Status**: This is a **prototype implementation** of a VirtoCommerce MCP Server module that provides a **Model Context Protocol (MCP)** server implementation to enable AI applications and Large Language Models (LLMs) to interact with VirtoCommerce APIs through a standardized interface.
+
+**Current State**:
+- ✅ Basic project structure and compilation
+- ✅ MCP protocol scaffolding
+- ⚠️ Core functionality is not yet implemented
+- ⚠️ API discovery and tool generation are placeholder implementations
+- ⚠️ Security and authentication need implementation
 
 ### What is Model Context Protocol (MCP)?
 
@@ -26,14 +39,25 @@ This module bridges VirtoCommerce's e-commerce capabilities with AI applications
 
 ### Key Features
 
-- ✅ **MCP 1.0 Compatible**: Implements the latest Model Context Protocol specification
-- ✅ **Auto-Discovery**: Automatically discovers and exposes API endpoints from VirtoCommerce modules
-- ✅ **Tool Generation**: Converts API controllers and methods into MCP tools with proper schemas
-- ✅ **Secure by Design**: Implements proper authentication and authorization
-- ✅ **Multi-Database Support**: Works with SQL Server, MySQL, and PostgreSQL
-- ✅ **Extensible**: Easy to extend with custom tools and capabilities
+**Currently Implemented:**
+- ✅ **Project Structure**: Complete module structure following VirtoCommerce standards
+- ✅ **MCP Scaffolding**: Basic MCP protocol server implementation
+- ✅ **Compilation**: Module compiles without errors and can be loaded
+
+**Planned Features (In Development):**
+- 🚧 **MCP 1.0 Compatible**: Will implement the latest Model Context Protocol specification
+- 🚧 **Auto-Discovery**: Will automatically discover and expose API endpoints from VirtoCommerce modules
+- 🚧 **Tool Generation**: Will convert API controllers and methods into MCP tools with proper schemas
+- 🚧 **Secure by Design**: Will implement proper authentication and authorization
+- 🚧 **Multi-Database Support**: Will work with SQL Server, MySQL, and PostgreSQL
+- 🚧 **Extensible**: Will be easy to extend with custom tools and capabilities
 
 ## Installation
+
+> **⚠️ Development Version Warning**
+>
+> This module is currently in **prototype stage**. Installation instructions below are for development and testing purposes only.
+> The module is not yet ready for production use and many features are not implemented.
 
 ### Prerequisites
 
@@ -41,33 +65,64 @@ This module bridges VirtoCommerce's e-commerce capabilities with AI applications
 - .NET 8.0 or later
 - One of the supported databases (SQL Server, MySQL, or PostgreSQL)
 
-### Install Module
+### Install Module (Development)
 
-1. **Download**: Download the module package from the [releases page](https://github.com/VirtoCommerce/vc-module-mcp-server/releases)
+**Note**: Since this is a development version, you'll likely want to build and install from source rather than using pre-built packages.
 
-2. **Install via Admin Panel**:
+1. **Build from Source** (Recommended for development):
+   ```bash
+   git clone https://github.com/VirtoCommerce/vc-module-mcp-server.git
+   cd vc-module-mcp-server
+   dotnet restore
+   dotnet build
+   dotnet pack
+   ```
+
+2. **Install via Admin Panel** (when packages are available):
    - Go to **Settings → Modules**
    - Click **Install from file**
    - Upload the module package
    - Restart the application
 
-3. **Install via CLI**:
+3. **Install via CLI** (when packages are available):
    ```bash
    vc-build install-module -PackagePath VirtoCommerce.McpServer.zip
    ```
 
 ### Configuration
 
-After installation, configure the module in **Settings → MCP Server**:
+> **⚠️ Limited Functionality**: Current version has minimal configuration options as most features are not yet implemented.
 
-- **Enable MCP Server**: Turn on the MCP server functionality
-- **Configure Security**: Set up authentication and permissions as needed
+After installation, the module will be available but with limited functionality:
+
+- The basic MCP server structure is in place
+- Most API endpoints will return "Not Implemented" responses
+- Configuration options are minimal in this prototype version
 
 ## Usage
 
-### Connecting AI Applications
+> **⚠️ Prototype Limitations**
+>
+> The current implementation is a **working prototype** with basic MCP server structure.
+> Most functionality described below is **planned for future implementation** and not yet available.
 
-Once installed, the MCP server will be available and can be connected to various AI applications:
+### Current Status
+
+**What Works:**
+- ✅ Module compiles and loads into VirtoCommerce
+- ✅ Basic MCP server scaffolding is in place
+- ✅ Example tool structure is implemented
+
+**What's Not Yet Implemented:**
+- ❌ Actual VirtoCommerce API discovery
+- ❌ Dynamic tool generation from API controllers
+- ❌ Real API method invocation
+- ❌ Authentication and security
+- ❌ Most MCP tools return placeholder responses
+
+### Future Usage (Planned)
+
+Once fully implemented, the MCP server will be available and can be connected to various AI applications:
 
 #### Claude Desktop Integration
 
@@ -291,11 +346,26 @@ Please report issues on our [GitHub Issues](https://github.com/VirtoCommerce/vc-
 
 ## Roadmap
 
+### Phase 1: Core Implementation (Current Priority)
+- [ ] 🚧 **VirtoCommerce API Discovery**: Implement actual module and controller discovery
+- [ ] 🚧 **Tool Generation Engine**: Convert discovered APIs to MCP tool definitions
+- [ ] 🚧 **Request Router**: Route MCP tool calls to appropriate VirtoCommerce API methods
+- [ ] 🚧 **Basic Authentication**: Implement API key authentication
+- [ ] 🚧 **Error Handling**: Proper error handling and logging
+
+### Phase 2: Enhanced Features
 - [ ] Enhanced tool generation with better schema inference
 - [ ] Support for MCP resources and prompts
+- [ ] Advanced authentication (OAuth, JWT)
+- [ ] Parameter validation and type conversion
+- [ ] Response caching and optimization
+
+### Phase 3: Advanced Integration
 - [ ] Integration with VirtoCommerce AI features
 - [ ] Advanced caching and performance optimizations
 - [ ] Support for webhooks and real-time updates
+- [ ] Custom tool extensibility framework
+- [ ] Admin UI for MCP server configuration
 
 ## Related Resources
 
