@@ -309,12 +309,6 @@ Key API endpoints include:
 - `/api/mcp-server` - MCP server status and configuration
 - Standard VirtoCommerce APIs exposed as MCP tools
 
-## Database Model
-
-The module uses minimal database storage for configuration and caching:
-
-![DB Model](./docs/media/diagram-db-model.png)
-
 ## Security Considerations
 
 - **Authentication**: Supports API key and OAuth authentication
