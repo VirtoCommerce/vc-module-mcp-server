@@ -14,6 +14,8 @@ using VirtoCommerce.McpServer.Data.MySql;
 using VirtoCommerce.McpServer.Data.PostgreSql;
 using VirtoCommerce.McpServer.Data.Repositories;
 using VirtoCommerce.McpServer.Data.SqlServer;
+using VirtoCommerce.McpServer.Web.Controllers.Api;
+using ModelContextProtocol.Server;
 
 namespace VirtoCommerce.McpServer.Web;
 
@@ -43,7 +45,7 @@ public class Module : IModule, IHasConfiguration
             }
         });
 
-        // Register MCP services
+        // Register VirtoCommerce MCP services
         serviceCollection.AddSingleton<IXmlDocumentationService, XmlDocumentationService>();
         serviceCollection.AddSingleton<IModuleManifestService, ModuleManifestService>();
         serviceCollection.AddSingleton<IApiDiscoveryService, ApiDiscoveryService>();
@@ -51,6 +53,10 @@ public class Module : IModule, IHasConfiguration
         // Register MCP server service
         serviceCollection.AddSingleton<McpServerService>();
         serviceCollection.AddHostedService(sp => sp.GetRequiredService<McpServerService>());
+
+        // Register proper MCP server using ModelContextProtocol library for SSE transport
+        serviceCollection.AddMcpServer()
+            .WithTools<VirtoCommerceMcpTools>();
 
         // Override models
         //AbstractTypeFactory<OriginalModel>.OverrideType<OriginalModel, ExtendedModel>().MapToType<ExtendedEntity>();

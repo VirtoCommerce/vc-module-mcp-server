@@ -373,3 +373,95 @@ For each discovered API endpoint, the MCP server generates a tool with:
 ## Example Modules
 
 See the `docs/examples/` directory for complete examples of modules with MCP configuration.
+
+## Real-World Example: Customer Service Integration
+
+The customer order search tool demonstrates how MCP can integrate VirtoCommerce with AI assistants for practical business use cases:
+
+### Scenario: Customer Service Representative using Claude Desktop
+
+A customer service representative can use Claude Desktop with the VirtoCommerce MCP server to quickly find and analyze customer orders:
+
+**1. Search by Customer Email:**
+```
+"Find all orders for customer john.doe@example.com"
+```
+
+Claude will use the `search_customer_orders` tool:
+```json
+{
+  "name": "search_customer_orders",
+  "arguments": {
+    "customerEmail": "john.doe@example.com"
+  }
+}
+```
+
+**2. Search Recent Orders:**
+```
+"Show me all processing orders from the last week"
+```
+
+Claude will construct:
+```json
+{
+  "name": "search_customer_orders",
+  "arguments": {
+    "status": "Processing",
+    "startDate": "2024-01-15T00:00:00Z"
+  }
+}
+```
+
+**3. Find Specific Order:**
+```
+"Look up order ORD-2024-001"
+```
+
+Claude will use:
+```json
+{
+  "name": "search_customer_orders",
+  "arguments": {
+    "orderNumber": "ORD-2024-001"
+  }
+}
+```
+
+### Benefits:
+
+- **Natural Language**: Speak naturally to find orders
+- **Secure**: Respects VirtoCommerce permissions (order:read)
+- **Real-Time**: Gets live data from VirtoCommerce platform
+- **Context Aware**: Claude can analyze order patterns and suggest actions
+- **Multi-Store**: Can filter by specific stores if needed
+
+This integration transforms customer service from manual database queries to conversational AI assistance.
+
+### Claude Desktop Configuration
+
+To use this with Claude Desktop, configure your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "virtocommerce": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://your-vc-instance.com/api/mcp/sse"
+      ],
+      "env": {
+        "MCP_API_KEY": "your-api-key"
+      }
+    }
+  }
+}
+```
+
+**Steps to configure:**
+1. Install mcp-remote: `npm install -g mcp-remote`
+2. Update the URL to your VirtoCommerce instance
+3. Set a valid API key with order:read permissions
+
+## Configuration Requirements

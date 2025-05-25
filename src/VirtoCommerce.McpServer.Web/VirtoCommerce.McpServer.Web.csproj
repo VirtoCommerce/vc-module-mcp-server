@@ -13,6 +13,9 @@
     <SonarQubeTestProject>false</SonarQubeTestProject>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="0.1.0-preview.6" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\VirtoCommerce.McpServer.Core\VirtoCommerce.McpServer.Core.csproj" />
     <ProjectReference Include="..\VirtoCommerce.McpServer.Data\VirtoCommerce.McpServer.Data.csproj" />
     <ProjectReference Include="..\VirtoCommerce.McpServer.Data.MySql\VirtoCommerce.McpServer.Data.MySql.csproj" />
