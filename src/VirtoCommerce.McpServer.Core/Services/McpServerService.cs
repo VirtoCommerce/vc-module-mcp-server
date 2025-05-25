@@ -1,298 +1,252 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
-using VirtoCommerce.Platform.Core.Modularity;
-using System.Reflection;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using ModelContextProtocol.Protocol.Types;
-using ModelContextProtocol.Protocol.Transport;
+using System.Text.Json;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
+using VirtoCommerce.Platform.Core.Modularity;
+using VirtoCommerce.McpServer.Core.Models;
 
 namespace VirtoCommerce.McpServer.Core.Services
 {
+    /// <summary>
+    /// MCP Server service that runs as part of VirtoCommerce platform
+    /// Exposes discovered APIs as MCP tools through HTTP endpoints
+    /// </summary>
     public class McpServerService : IHostedService
     {
         private readonly ILogger<McpServerService> _logger;
-        private readonly IModuleManager _moduleManager;
         private readonly IServiceProvider _serviceProvider;
-        private IMcpServer _server;
+        private readonly IApiDiscoveryService _apiDiscoveryService;
+        private readonly IModuleManifestService _moduleManifestService;
+        private readonly IXmlDocumentationService _xmlDocumentationService;
+
+        private List<ApiEndpoint> _discoveredEndpoints;
 
         public McpServerService(
             ILogger<McpServerService> logger,
-            IModuleManager moduleManager,
-            IServiceProvider serviceProvider)
+            IServiceProvider serviceProvider,
+            IApiDiscoveryService apiDiscoveryService,
+            IModuleManifestService moduleManifestService,
+            IXmlDocumentationService xmlDocumentationService)
         {
             _logger = logger;
-            _moduleManager = moduleManager;
             _serviceProvider = serviceProvider;
+            _apiDiscoveryService = apiDiscoveryService;
+            _moduleManifestService = moduleManifestService;
+            _xmlDocumentationService = xmlDocumentationService;
         }
 
-        private IEnumerable<ApiEndpoint> GetApiEndpoints(Assembly assembly)
+        public Task StartAsync(CancellationToken cancellationToken)
         {
-            var endpoints = new List<ApiEndpoint>();
-
             try
             {
-                // Find all controller types in the assembly
-                var controllerTypes = assembly.GetTypes()
-                    .Where(t => t.IsClass && !t.IsAbstract && t.Name.EndsWith("Controller"))
-                    .Where(t => t.GetCustomAttribute<ApiControllerAttribute>() != null || t.GetCustomAttribute<ControllerAttribute>() != null);
+                // Discover API endpoints from MCP-enabled modules
+                _discoveredEndpoints = _apiDiscoveryService.DiscoverAllApiEndpoints().ToList();
+                _logger.LogInformation("MCP Server started: Discovered {EndpointCount} API endpoints for MCP exposure",
+                    _discoveredEndpoints.Count);
 
-                foreach (var controllerType in controllerTypes)
+                // Log discovered tools for debugging
+                foreach (var endpoint in _discoveredEndpoints)
                 {
-                    // Get the base route from the controller
-                    var routeAttribute = controllerType.GetCustomAttribute<RouteAttribute>();
-                    var baseRoute = routeAttribute?.Template ?? controllerType.Name.Replace("Controller", "").ToLower();
-
-                    // Get all public methods that are actions
-                    var actionMethods = controllerType.GetMethods(BindingFlags.Public | BindingFlags.Instance)
-                        .Where(m => m.GetCustomAttribute<HttpGetAttribute>() != null ||
-                                   m.GetCustomAttribute<HttpPostAttribute>() != null ||
-                                   m.GetCustomAttribute<HttpPutAttribute>() != null ||
-                                   m.GetCustomAttribute<HttpDeleteAttribute>() != null);
-
-                    foreach (var method in actionMethods)
-                    {
-                        var httpMethod = GetHttpMethod(method);
-                        var route = GetRoute(method, baseRoute);
-                        var parameters = GetParameters(method);
-                        var description = GetDescription(method);
-
-                        endpoints.Add(new ApiEndpoint
-                        {
-                            Method = httpMethod,
-                            Route = route,
-                            Parameters = parameters,
-                            Description = description
-                        });
-                    }
+                    _logger.LogDebug("MCP Tool available: {ToolName} -> {Method} {Route} ({Description})",
+                        endpoint.ToolName, endpoint.Method, endpoint.Route, endpoint.Description);
                 }
+
+                _logger.LogInformation("MCP Server service started successfully as VirtoCommerce module with {EndpointCount} tools",
+                    _discoveredEndpoints.Count);
+
+                return Task.CompletedTask;
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to scan assembly {Assembly} for API endpoints", assembly.FullName);
+                _logger.LogError(ex, "Failed to start MCP server service");
+                throw;
             }
-
-            return endpoints;
         }
 
-        private string GetHttpMethod(MethodInfo method)
+        public Task StopAsync(CancellationToken cancellationToken)
         {
-            if (method.GetCustomAttribute<HttpGetAttribute>() != null) return "GET";
-            if (method.GetCustomAttribute<HttpPostAttribute>() != null) return "POST";
-            if (method.GetCustomAttribute<HttpPutAttribute>() != null) return "PUT";
-            if (method.GetCustomAttribute<HttpDeleteAttribute>() != null) return "DELETE";
-            return "GET"; // Default to GET if no attribute found
+            _logger.LogInformation("MCP Server service stopped");
+            return Task.CompletedTask;
         }
 
-        private string GetRoute(MethodInfo method, string baseRoute)
+        /// <summary>
+        /// Get all discovered endpoints as MCP tools
+        /// Called by MCP controller endpoints
+        /// </summary>
+        public IEnumerable<ApiEndpoint> GetDiscoveredEndpoints()
         {
-            var routeAttribute = method.GetCustomAttribute<RouteAttribute>();
-            if (routeAttribute != null)
+            return _discoveredEndpoints ?? Enumerable.Empty<ApiEndpoint>();
+        }
+
+        /// <summary>
+        /// Get MCP tools in the format expected by MCP protocol
+        /// </summary>
+        public IEnumerable<object> GetMcpTools()
+        {
+            return (_discoveredEndpoints ?? Enumerable.Empty<ApiEndpoint>())
+                .Select(CreateMcpTool);
+        }
+
+        /// <summary>
+        /// Execute an MCP tool by name with provided arguments
+        /// </summary>
+        public Task<object> ExecuteToolAsync(string toolName, Dictionary<string, object> arguments, CancellationToken cancellationToken = default)
+        {
+            try
             {
-                return routeAttribute.Template.StartsWith("/") ? routeAttribute.Template : $"/{routeAttribute.Template}";
-            }
-
-            // If no route attribute, use the method name
-            var methodName = method.Name.ToLower();
-            if (methodName.StartsWith("get")) methodName = methodName[3..];
-            if (methodName.StartsWith("post")) methodName = methodName[4..];
-            if (methodName.StartsWith("put")) methodName = methodName[3..];
-            if (methodName.StartsWith("delete")) methodName = methodName[6..];
-
-            return $"/{baseRoute}/{methodName}";
-        }
-
-        private Dictionary<string, object> GetParameters(MethodInfo method)
-        {
-            var parameters = new Dictionary<string, object>();
-
-            foreach (var param in method.GetParameters())
-            {
-                var paramType = param.ParameterType;
-                var paramSchema = new Dictionary<string, object>
+                var endpoint = _discoveredEndpoints?.FirstOrDefault(e => e.ToolName == toolName);
+                if (endpoint == null)
                 {
-                    ["type"] = GetJsonSchemaType(paramType),
-                    ["description"] = GetDescription(param)
-                };
-
-                if (paramType.IsValueType && !paramType.IsEnum && !paramType.IsPrimitive)
-                {
-                    paramSchema["properties"] = GetTypeProperties(paramType);
+                    throw new ArgumentException($"Unknown tool: '{toolName}'");
                 }
 
-                parameters[param.Name] = paramSchema;
+                return InvokeApiEndpointAsync(endpoint, arguments, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error executing MCP tool {ToolName}", toolName);
+                throw;
+            }
+        }
+
+        private object CreateMcpTool(ApiEndpoint endpoint)
+        {
+            var inputSchema = CreateInputSchema(endpoint);
+
+            return new
+            {
+                name = endpoint.ToolName,
+                description = endpoint.Description ?? $"{endpoint.Method} {endpoint.Route}",
+                inputSchema = inputSchema
+            };
+        }
+
+        private object CreateInputSchema(ApiEndpoint endpoint)
+        {
+            var schema = new Dictionary<string, object>
+            {
+                ["type"] = "object",
+                ["properties"] = new Dictionary<string, object>(),
+                ["required"] = new List<string>()
+            };
+
+            var properties = (Dictionary<string, object>)schema["properties"];
+            var required = (List<string>)schema["required"];
+
+            // Add parameters from the endpoint metadata
+            foreach (var (paramName, paramInfo) in endpoint.Parameters)
+            {
+                properties[paramName] = paramInfo;
+
+                if (paramInfo is Dictionary<string, object> paramDict &&
+                    paramDict.TryGetValue("required", out var isRequired) &&
+                    isRequired is true)
+                {
+                    required.Add(paramName);
+                }
+            }
+
+            // Add route parameters
+            var routeParams = ExtractRouteParameters(endpoint.Route);
+            foreach (var routeParam in routeParams)
+            {
+                if (!properties.ContainsKey(routeParam))
+                {
+                    properties[routeParam] = new Dictionary<string, object>
+                    {
+                        ["type"] = "string",
+                        ["description"] = $"Route parameter: {routeParam}"
+                    };
+                    required.Add(routeParam);
+                }
+            }
+
+            return schema;
+        }
+
+        private List<string> ExtractRouteParameters(string route)
+        {
+            var parameters = new List<string>();
+            var matches = System.Text.RegularExpressions.Regex.Matches(route, @"\{([^}]+)\}");
+
+            foreach (System.Text.RegularExpressions.Match match in matches)
+            {
+                var paramName = match.Groups[1].Value;
+                if (paramName.Contains(":"))
+                {
+                    paramName = paramName.Split(':')[0];
+                }
+                if (paramName.EndsWith("?"))
+                {
+                    paramName = paramName.TrimEnd('?');
+                }
+                parameters.Add(paramName);
             }
 
             return parameters;
         }
 
-        private string GetJsonSchemaType(Type type)
-        {
-            if (type == typeof(string)) return "string";
-            if (type == typeof(int) || type == typeof(long) || type == typeof(short)) return "integer";
-            if (type == typeof(decimal) || type == typeof(double) || type == typeof(float)) return "number";
-            if (type == typeof(bool)) return "boolean";
-            if (type == typeof(DateTime)) return "string";
-            if (type.IsArray) return "array";
-            if (type.IsEnum) return "string";
-            return "object";
-        }
-
-        private Dictionary<string, object> GetTypeProperties(Type type)
-        {
-            var properties = new Dictionary<string, object>();
-
-            foreach (var prop in type.GetProperties())
-            {
-                properties[prop.Name] = new Dictionary<string, object>
-                {
-                    ["type"] = GetJsonSchemaType(prop.PropertyType),
-                    ["description"] = GetDescription(prop)
-                };
-            }
-
-            return properties;
-        }
-
-        private string GetDescription(MemberInfo member)
-        {
-            var summaryAttribute = member.GetCustomAttribute<System.ComponentModel.DescriptionAttribute>();
-            if (summaryAttribute != null)
-            {
-                return summaryAttribute.Description;
-            }
-
-            return string.Empty;
-        }
-
-        private string GetDescription(ParameterInfo parameter)
-        {
-            var summaryAttribute = parameter.GetCustomAttribute<System.ComponentModel.DescriptionAttribute>();
-            if (summaryAttribute != null)
-            {
-                return summaryAttribute.Description;
-            }
-
-            return string.Empty;
-        }
-
-        private Task<CallToolResponse> InvokeControllerMethod(string moduleName, string httpMethod, string route, Dictionary<string, object> arguments)
-        {
-            // For now, return a simple response indicating the method is not implemented
-            // TODO: Implement actual controller method invocation when VirtoCommerce API is clarified
-            throw new NotImplementedException("Controller method invocation not yet implemented");
-        }
-
-        public async Task StartAsync(CancellationToken cancellationToken)
+        private Task<object> InvokeApiEndpointAsync(ApiEndpoint endpoint, Dictionary<string, object> arguments, CancellationToken cancellationToken)
         {
             try
             {
-                var builder = Host.CreateApplicationBuilder();
-                builder.Logging.AddConsole(consoleLogOptions =>
-                {
-                    consoleLogOptions.LogToStandardErrorThreshold = LogLevel.Trace;
-                });
+                _logger.LogInformation("Executing MCP tool: {ToolName} ({Method} {Route})",
+                    endpoint.ToolName, endpoint.Method, endpoint.Route);
 
-                builder.Services
-                    .AddMcpServer()
-                    .WithStdioServerTransport()
-                    .WithToolsFromAssembly();
+                // TODO: Implement actual API invocation through VirtoCommerce's controller infrastructure
+                // This would involve:
+                // 1. Creating HTTP context
+                // 2. Calling the actual controller method
+                // 3. Handling authentication/authorization through VirtoCommerce
+                // 4. Returning the actual API response
 
-                _server = McpServerFactory.Create(new StdioServerTransport("VirtoCommerce"), new McpServerOptions
+                // For now, return structured information about the tool execution
+                var response = new
                 {
-                    ServerInfo = new() { Name = "VirtoCommerce MCP Server", Version = "1.0.0" },
-                    Capabilities = new()
+                    success = true,
+                    message = $"MCP tool '{endpoint.ToolName}' executed successfully",
+                    endpoint = new
                     {
-                        Tools = new()
-                        {
-                            ListToolsHandler = (request, cancellationToken) =>
-                            {
-                                var tools = new List<Tool>();
+                        toolName = endpoint.ToolName,
+                        method = endpoint.Method,
+                        route = endpoint.Route,
+                        module = endpoint.ModuleId,
+                        controller = endpoint.ControllerName,
+                        action = endpoint.ActionName
+                    },
+                    arguments = arguments,
+                    security = new
+                    {
+                        requiresAuthentication = endpoint.Security.RequiresAuthentication,
+                        allowAnonymous = endpoint.Security.AllowAnonymous,
+                        requiredPermissions = endpoint.Security.RequiredPermissions,
+                        requiredRoles = endpoint.Security.RequiredRoles
+                    },
+                    timestamp = DateTime.UtcNow.ToString("O"),
+                    note = "This is a simulation. Actual API invocation will be implemented to call VirtoCommerce controllers directly."
+                };
 
-                                // Add a simple example tool for now
-                                tools.Add(new Tool
-                                {
-                                    Name = "example_tool",
-                                    Description = "An example tool",
-                                    InputSchema = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>("""
-                                        {
-                                            "type": "object",
-                                            "properties": {
-                                                "message": {
-                                                    "type": "string",
-                                                    "description": "The message to process"
-                                                }
-                                            },
-                                            "required": ["message"]
-                                        }
-                                        """)
-                                });
-
-                                return Task.FromResult(new ListToolsResult { Tools = tools });
-                            },
-                            CallToolHandler = (request, cancellationToken) =>
-                            {
-                                if (request.Params?.Name == null)
-                                    throw new ArgumentException("Tool name is required");
-
-                                if (request.Params.Name == "example_tool")
-                                {
-                                    var message = "No message";
-                                    if (request.Params.Arguments?.TryGetValue("message", out var msgValue) == true)
-                                    {
-                                        message = msgValue.ToString() ?? "No message";
-                                    }
-
-                                    return Task.FromResult(new CallToolResponse
-                                    {
-                                        Content = new List<Content>
-                                        {
-                                            new Content
-                                            {
-                                                Type = "text",
-                                                Text = $"Processed message: {message}"
-                                            }
-                                        }
-                                    });
-                                }
-
-                                throw new ArgumentException($"Unknown tool: {request.Params.Name}");
-                            }
-                        }
-                    }
-                });
-
-                await _server.RunAsync();
+                return Task.FromResult<object>(response);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error starting MCP server");
-                throw;
+                _logger.LogError(ex, "Error invoking API endpoint {ToolName}", endpoint.ToolName);
+
+                var errorResponse = new
+                {
+                    success = false,
+                    error = ex.Message,
+                    toolName = endpoint.ToolName,
+                    timestamp = DateTime.UtcNow.ToString("O")
+                };
+
+                return Task.FromResult<object>(errorResponse);
             }
         }
-
-        public async Task StopAsync(CancellationToken cancellationToken)
-        {
-            if (_server != null)
-            {
-                await _server.DisposeAsync();
-            }
-        }
-    }
-
-    internal class ApiEndpoint
-    {
-        public string Method { get; set; }
-        public string Route { get; set; }
-        public Dictionary<string, object> Parameters { get; set; }
-        public string Description { get; set; }
     }
 }

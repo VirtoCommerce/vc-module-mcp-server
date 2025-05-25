@@ -126,17 +126,36 @@ Once fully implemented, the MCP server will be available and can be connected to
 
 #### Claude Desktop Integration
 
-Add to your Claude Desktop MCP configuration:
+Since the MCP server runs as part of your VirtoCommerce platform, Claude Desktop connects via Server-Sent Events (SSE) to the platform's MCP endpoints:
 
 ```json
 {
   "mcpServers": {
     "virtocommerce": {
-      "command": "dotnet",
-      "args": ["run", "--project", "path/to/VirtoCommerce.McpServer"],
+      "type": "sse",
+      "url": "https://your-vc-instance.com/api/mcp/sse",
+      "headers": {
+        "Authorization": "Bearer your-api-key",
+        "Content-Type": "application/json"
+      }
+    }
+  }
+}
+```
+
+**Alternative configuration using mcp-remote proxy** (if SSE isn't directly supported):
+
+```json
+{
+  "mcpServers": {
+    "virtocommerce": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://your-vc-instance.com/api/mcp/sse"
+      ],
       "env": {
-        "VIRTOCOMMERCE_URL": "https://your-vc-instance.com",
-        "VIRTOCOMMERCE_API_KEY": "your-api-key"
+        "MCP_API_KEY": "your-api-key"
       }
     }
   }
@@ -145,10 +164,18 @@ Add to your Claude Desktop MCP configuration:
 
 #### Custom AI Applications
 
-Use any MCP-compatible client library to connect:
+Use any MCP-compatible client library to connect via SSE:
 
 ```csharp
-var transport = new StdioClientTransport("dotnet", ["run", "--project", "VirtoCommerce.McpServer"]);
+var transport = new SseClientTransport(new SseClientTransportOptions
+{
+    Url = "https://your-vc-instance.com/api/mcp/sse",
+    Headers = new Dictionary<string, string>
+    {
+        ["Authorization"] = "Bearer your-api-key"
+    }
+});
+
 var client = await McpClientFactory.CreateAsync(transport);
 
 // List available tools

@@ -43,6 +43,11 @@ public class Module : IModule, IHasConfiguration
             }
         });
 
+        // Register MCP services
+        serviceCollection.AddSingleton<IXmlDocumentationService, XmlDocumentationService>();
+        serviceCollection.AddSingleton<IModuleManifestService, ModuleManifestService>();
+        serviceCollection.AddSingleton<IApiDiscoveryService, ApiDiscoveryService>();
+
         // Register MCP server service
         serviceCollection.AddSingleton<McpServerService>();
         serviceCollection.AddHostedService(sp => sp.GetRequiredService<McpServerService>());

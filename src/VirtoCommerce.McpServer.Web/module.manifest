@@ -30,4 +30,49 @@
   <copyright>Copyright © 2025 VirtoCommerce. All rights reserved</copyright>
   <tags>extension module</tags>
   <useFullTypeNameInSwagger>false</useFullTypeNameInSwagger>
+
+  <!-- MCP Configuration Section -->
+  <mcp>
+    <enabled>true</enabled>
+    <description>VirtoCommerce MCP Server - provides Model Context Protocol interface for AI applications</description>
+    <version>1.0.0</version>
+    <capabilities>
+      <tools>true</tools>
+      <resources>false</resources>
+      <prompts>false</prompts>
+    </capabilities>
+    <apiExposure>
+      <!-- Define which API controllers and methods should be exposed as MCP tools -->
+      <controllers>
+        <!-- Include all controllers by default, but allow specific inclusion/exclusion -->
+        <include pattern="*Controller" />
+        <!-- Example: exclude certain controllers -->
+        <!-- <exclude pattern="InternalController" /> -->
+      </controllers>
+      <methods>
+        <!-- Include HTTP methods to expose -->
+        <include httpMethod="GET" />
+        <include httpMethod="POST" />
+        <include httpMethod="PUT" />
+        <include httpMethod="DELETE" />
+      </methods>
+      <security>
+        <!-- Require authentication for all MCP tools by default -->
+        <requireAuthentication>true</requireAuthentication>
+        <!-- Honor existing controller/action authorization attributes -->
+        <respectExistingAuthorization>true</respectExistingAuthorization>
+        <!-- Additional MCP-specific permissions -->
+        <mcpPermissions>
+          <permission>McpServer:access</permission>
+        </mcpPermissions>
+      </security>
+    </apiExposure>
+    <toolNaming>
+      <!-- How to generate MCP tool names from controller/action combinations -->
+      <convention>module_controller_action</convention> <!-- e.g., "mcpserver_example_get" -->
+      <removeControllerSuffix>true</removeControllerSuffix>
+      <useCamelCase>false</useCamelCase>
+      <separator>_</separator>
+    </toolNaming>
+  </mcp>
 </module>
