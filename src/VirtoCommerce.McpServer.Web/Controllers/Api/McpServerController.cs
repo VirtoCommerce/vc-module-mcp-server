@@ -200,23 +200,6 @@ namespace VirtoCommerce.McpServer.Web.Controllers.Api
             });
         }
 
-        /// <summary>
-        /// Legacy endpoint for backward compatibility
-        /// </summary>
-        [HttpGet]
-        [Route("../mcp-server")]
-        [Authorize(ModuleConstants.Security.Permissions.Read)]
-        public ActionResult<object> LegacyGet()
-        {
-            return Ok(new {
-                result = "Hello world from VirtoCommerce MCP Server!",
-                timestamp = DateTime.UtcNow,
-                module = "VirtoCommerce.McpServer",
-                version = "1.0.0",
-                note = "This endpoint is deprecated. Use /api/mcp/ endpoints instead."
-            });
-        }
-
         private async Task WriteEventAsync(string eventType, object data)
         {
             var json = JsonSerializer.Serialize(data);
