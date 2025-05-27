@@ -118,36 +118,14 @@ namespace VirtoCommerce.McpServer.Web.Controllers.Api
                         return Ok(initResponse);
 
                     case "tools/list":
+                        var tools = _mcpServerService.GetMcpTools();
                         var toolsResponse = new
                         {
                             jsonrpc = "2.0",
                             id = id,
                             result = new
                             {
-                                tools = new[]
-                                {
-                                    new
-                                    {
-                                        name = "search_customer_orders",
-                                        description = "Search customer orders by various criteria",
-                                        inputSchema = new
-                                        {
-                                            type = "object",
-                                            properties = new
-                                            {
-                                                customerId = new { type = "string", description = "Customer ID to search orders for" },
-                                                customerEmail = new { type = "string", description = "Customer email to search orders for" },
-                                                orderNumber = new { type = "string", description = "Order number to search for" },
-                                                status = new { type = "string", description = "Order status to filter by" },
-                                                storeId = new { type = "string", description = "Store ID to filter orders" },
-                                                startDate = new { type = "string", description = "Start date for order search (ISO 8601 format)" },
-                                                endDate = new { type = "string", description = "End date for order search (ISO 8601 format)" },
-                                                take = new { type = "integer", description = "Maximum number of orders to return", @default = 20 },
-                                                skip = new { type = "integer", description = "Number of orders to skip for pagination", @default = 0 }
-                                            }
-                                        }
-                                    }
-                                }
+                                tools = tools.ToArray()
                             }
                         };
                         return Ok(toolsResponse);
@@ -162,72 +140,73 @@ namespace VirtoCommerce.McpServer.Web.Controllers.Api
                             {
                                 foreach (var property in argsElement.EnumerateObject())
                                 {
-                                    arguments[property.Name] = property.Value.ToString() ?? "";
+                                    // Handle different JSON value types
+                                    object? value = property.Value.ValueKind switch
+                                    {
+                                        JsonValueKind.String => property.Value.GetString(),
+                                        JsonValueKind.Number => property.Value.GetDouble(),
+                                        JsonValueKind.True => true,
+                                        JsonValueKind.False => false,
+                                        JsonValueKind.Array => property.Value,
+                                        JsonValueKind.Object => property.Value,
+                                        JsonValueKind.Null => null,
+                                        _ => property.Value.ToString()
+                                    };
+                                    arguments[property.Name] = value ?? "";
                                 }
                             }
 
-                            if (toolName == "search_customer_orders")
+                            if (!string.IsNullOrEmpty(toolName))
                             {
-                                // Create a mock result for now
-                                var mockResult = new
+                                try
                                 {
-                                    message = "Customer order search executed successfully",
-                                    toolName = toolName,
-                                    arguments = arguments,
-                                    results = new[]
-                                    {
-                                        new
-                                        {
-                                            orderId = "ORD-12345",
-                                            orderNumber = "2024-001",
-                                            customerEmail = arguments.ContainsKey("customerEmail") ? arguments["customerEmail"] : "customer@example.com",
-                                            status = "Completed",
-                                            total = 299.99,
-                                            createdDate = "2024-01-15T10:30:00Z"
-                                        },
-                                        new
-                                        {
-                                            orderId = "ORD-12346",
-                                            orderNumber = "2024-002",
-                                            customerEmail = arguments.ContainsKey("customerEmail") ? arguments["customerEmail"] : "customer@example.com",
-                                            status = "Processing",
-                                            total = 149.50,
-                                            createdDate = "2024-01-16T14:20:00Z"
-                                        }
-                                    },
-                                    timestamp = DateTime.UtcNow
-                                };
+                                    var result = await _mcpServerService.ExecuteToolAsync(toolName, arguments, HttpContext.RequestAborted);
 
-                                var callResponse = new
-                                {
-                                    jsonrpc = "2.0",
-                                    id = id,
-                                    result = new
+                                    var callResponse = new
                                     {
-                                        content = new[]
+                                        jsonrpc = "2.0",
+                                        id = id,
+                                        result = new
                                         {
-                                            new
+                                            content = new[]
                                             {
-                                                type = "text",
-                                                text = JsonSerializer.Serialize(mockResult, new JsonSerializerOptions { WriteIndented = true })
+                                                new
+                                                {
+                                                    type = "text",
+                                                    text = JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true })
+                                                }
                                             }
                                         }
-                                    }
-                                };
-                                return Ok(callResponse);
-                            }
-                            else
-                            {
-                                return Ok(new
+                                    };
+                                    return Ok(callResponse);
+                                }
+                                catch (ArgumentException)
                                 {
-                                    jsonrpc = "2.0",
-                                    id = id,
-                                    error = new
+                                    return Ok(new
                                     {
-                                        code = -32601,
-                                        message = $"Tool '{toolName}' not found"
-                                    }
-                                });
+                                        jsonrpc = "2.0",
+                                        id = id,
+                                        error = new
+                                        {
+                                            code = -32601,
+                                            message = $"Tool '{toolName}' not found"
+                                        }
+                                    });
+                                }
+                                catch (Exception ex)
+                                {
+                                    return Ok(new
+                                    {
+                                        jsonrpc = "2.0",
+                                        id = id,
+                                        error = new
+                                        {
+                                            code = -32603,
+                                            message = "Internal error",
+                                            data = ex.Message
+                                        }
+                                    });
+                                }
                             }
                         }
 
@@ -390,14 +369,23 @@ namespace VirtoCommerce.McpServer.Web.Controllers.Api
         [McpServerTool, Description("Search customer orders by various criteria")]
         public async Task<string> SearchCustomerOrders(
             [Description("Customer ID to search orders for")] string? customerId = null,
-            [Description("Customer email to search orders for")] string? customerEmail = null,
-            [Description("Order number to search for")] string? orderNumber = null,
+            [Description("Array of customer IDs to search orders for")] string[]? customerIds = null,
+            [Description("Order number to search for")] string? number = null,
+            [Description("Array of order numbers to search for")] string[]? numbers = null,
             [Description("Order status to filter by")] string? status = null,
-            [Description("Store ID to filter orders")] string? storeId = null,
+            [Description("Array of order statuses to filter by")] string[]? statuses = null,
+            [Description("Array of store IDs to filter orders")] string[]? storeIds = null,
+            [Description("Organization ID to filter orders")] string? organizationId = null,
+            [Description("Employee ID to filter orders")] string? employeeId = null,
             [Description("Start date for order search (ISO 8601 format)")] string? startDate = null,
             [Description("End date for order search (ISO 8601 format)")] string? endDate = null,
+            [Description("Include prototype orders in search")] bool? withPrototypes = null,
+            [Description("Search only recurring orders created by subscription")] bool? onlyRecurring = null,
+            [Description("Search orders with given subscription ID")] string? subscriptionId = null,
+            [Description("Keyword to search for in orders")] string? keyword = null,
             [Description("Maximum number of orders to return (default: 20)")] int take = 20,
             [Description("Number of orders to skip for pagination (default: 0)")] int skip = 0,
+            [Description("Sort expression (e.g., 'createdDate:desc')")] string? sort = null,
             CancellationToken cancellationToken = default)
         {
             try
@@ -405,12 +393,21 @@ namespace VirtoCommerce.McpServer.Web.Controllers.Api
                 var arguments = new Dictionary<string, object>();
 
                 if (!string.IsNullOrEmpty(customerId)) arguments["customerId"] = customerId;
-                if (!string.IsNullOrEmpty(customerEmail)) arguments["customerEmail"] = customerEmail;
-                if (!string.IsNullOrEmpty(orderNumber)) arguments["orderNumber"] = orderNumber;
+                if (customerIds?.Length > 0) arguments["customerIds"] = customerIds;
+                if (!string.IsNullOrEmpty(number)) arguments["number"] = number;
+                if (numbers?.Length > 0) arguments["numbers"] = numbers;
                 if (!string.IsNullOrEmpty(status)) arguments["status"] = status;
-                if (!string.IsNullOrEmpty(storeId)) arguments["storeId"] = storeId;
+                if (statuses?.Length > 0) arguments["statuses"] = statuses;
+                if (storeIds?.Length > 0) arguments["storeIds"] = storeIds;
+                if (!string.IsNullOrEmpty(organizationId)) arguments["organizationId"] = organizationId;
+                if (!string.IsNullOrEmpty(employeeId)) arguments["employeeId"] = employeeId;
                 if (!string.IsNullOrEmpty(startDate)) arguments["startDate"] = startDate;
                 if (!string.IsNullOrEmpty(endDate)) arguments["endDate"] = endDate;
+                if (withPrototypes.HasValue) arguments["withPrototypes"] = withPrototypes.Value;
+                if (onlyRecurring.HasValue) arguments["onlyRecurring"] = onlyRecurring.Value;
+                if (!string.IsNullOrEmpty(subscriptionId)) arguments["subscriptionId"] = subscriptionId;
+                if (!string.IsNullOrEmpty(keyword)) arguments["keyword"] = keyword;
+                if (!string.IsNullOrEmpty(sort)) arguments["sort"] = sort;
                 arguments["take"] = take;
                 arguments["skip"] = skip;
 

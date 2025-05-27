@@ -1,0 +1,93 @@
+### Test MCP Server with API Key Header Authentication
+POST http://localhost:5000/api/mcp/tools/call
+Content-Type: application/json
+api_key: your-api-key-here
+
+{
+  "name": "search_customer_orders",
+  "arguments": {
+    "take": 10,
+    "skip": 0,
+    "sort": "createdDate:desc"
+  }
+}
+
+###
+
+### Test MCP Server with API Key Query String Authentication
+POST http://localhost:5000/api/mcp/tools/call?api_key=your-api-key-here
+Content-Type: application/json
+
+{
+  "name": "search_customer_orders",
+  "arguments": {
+    "status": "Completed",
+    "take": 5,
+    "skip": 0,
+    "startDate": "2024-01-01T00:00:00Z",
+    "endDate": "2024-12-31T23:59:59Z"
+  }
+}
+
+###
+
+### Test MCP Server with Bearer Token Authentication
+POST http://localhost:5000/api/mcp/tools/call
+Content-Type: application/json
+Authorization: Bearer your-bearer-token-here
+
+{
+  "name": "search_customer_orders",
+  "arguments": {
+    "customerId": "customer-123",
+    "take": 20
+  }
+}
+
+###
+
+### Test MCP Tools List (no authentication required for this endpoint)
+GET http://localhost:5000/api/mcp/tools
+Content-Type: application/json
+
+###
+
+### Test MCP Server Status (no authentication required for this endpoint)
+GET http://localhost:5000/api/mcp/status
+Content-Type: application/json
+
+###
+
+### Test Customer Order Search with Complex Filters and API Key
+POST http://localhost:5000/api/mcp/tools/call
+Content-Type: application/json
+api_key: your-api-key-here
+
+{
+  "name": "search_customer_orders",
+  "arguments": {
+    "customerIds": ["customer-123", "customer-456"],
+    "statuses": ["New", "Processing", "Completed"],
+    "storeIds": ["store-main", "store-branch"],
+    "startDate": "2024-01-01T00:00:00Z",
+    "endDate": "2024-12-31T23:59:59Z",
+    "keyword": "priority",
+    "take": 50,
+    "skip": 0,
+    "sort": "createdDate:desc"
+  }
+}
+
+###
+
+### Test Direct Order Search API with API Key (bypassing MCP)
+POST http://localhost:5000/api/order/customerOrders/search
+Content-Type: application/json
+api_key: your-api-key-here
+
+{
+  "customerId": "customer-123",
+  "take": 10,
+  "skip": 0,
+  "sort": "createdDate:desc"
+}

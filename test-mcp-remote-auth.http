@@ -1,0 +1,150 @@
+### Test MCP Endpoint Status (No Auth Required)
+GET http://localhost:5000/api/mcp/status
+Content-Type: application/json
+
+###
+
+### Test MCP Tools List via HTTP POST with API Key Header
+POST http://localhost:5000/api/mcp
+Content-Type: application/json
+api_key: your-api-key-here
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/list"
+}
+
+###
+
+### Test MCP Initialize with API Key Header
+POST http://localhost:5000/api/mcp
+Content-Type: application/json
+api_key: your-api-key-here
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "tools": {}
+    },
+    "clientInfo": {
+      "name": "test-client",
+      "version": "1.0.0"
+    }
+  }
+}
+
+###
+
+### Test Customer Order Search Tool Call with API Key Header
+POST http://localhost:5000/api/mcp
+Content-Type: application/json
+api_key: your-api-key-here
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "search_customer_orders",
+    "arguments": {
+      "take": 5,
+      "skip": 0,
+      "sort": "createdDate:desc"
+    }
+  }
+}
+
+###
+
+### Test with Bearer Token Authentication
+POST http://localhost:5000/api/mcp
+Content-Type: application/json
+Authorization: Bearer your-bearer-token-here
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "search_customer_orders",
+    "arguments": {
+      "customerId": "customer-123",
+      "take": 10
+    }
+  }
+}
+
+###
+
+### Test with API Key Query String
+POST http://localhost:5000/api/mcp?api_key=your-api-key-here
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/list"
+}
+
+###
+
+### Test Customer Order Search with Complex Filters
+POST http://localhost:5000/api/mcp
+Content-Type: application/json
+api_key: your-api-key-here
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "search_customer_orders",
+    "arguments": {
+      "customerIds": ["customer-123", "customer-456"],
+      "statuses": ["New", "Processing", "Completed"],
+      "storeIds": ["store-main"],
+      "startDate": "2024-01-01T00:00:00Z",
+      "endDate": "2024-12-31T23:59:59Z",
+      "keyword": "priority",
+      "take": 20,
+      "skip": 0,
+      "sort": "createdDate:desc",
+      "withPrototypes": false,
+      "onlyRecurring": false
+    }
+  }
+}
+
+###
+
+### Test Error Handling - Invalid Tool Name
+POST http://localhost:5000/api/mcp
+Content-Type: application/json
+api_key: your-api-key-here
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "non_existent_tool",
+    "arguments": {}
+  }
+}
+
+###
+
+### Test Without Authentication (Should Work for tools/list but Fail for API Calls)
+POST http://localhost:5000/api/mcp
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/list"
+}

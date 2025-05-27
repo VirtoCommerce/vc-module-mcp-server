@@ -1,0 +1,106 @@
+### Test MCP Server Status
+GET http://localhost:5000/api/mcp/status
+Content-Type: application/json
+
+###
+
+### Test MCP Tools List
+GET http://localhost:5000/api/mcp/tools
+Content-Type: application/json
+
+###
+
+### Test Customer Order Search via MCP Tools Call API
+POST http://localhost:5000/api/mcp/tools/call
+Content-Type: application/json
+
+{
+  "name": "search_customer_orders",
+  "arguments": {
+    "take": 10,
+    "skip": 0,
+    "sort": "createdDate:desc"
+  }
+}
+
+###
+
+### Test Customer Order Search with Filters
+POST http://localhost:5000/api/mcp/tools/call
+Content-Type: application/json
+
+{
+  "name": "search_customer_orders",
+  "arguments": {
+    "status": "Completed",
+    "take": 5,
+    "skip": 0,
+    "startDate": "2024-01-01T00:00:00Z",
+    "endDate": "2024-12-31T23:59:59Z"
+  }
+}
+
+###
+
+### Test MCP Protocol Compatible Request - Initialize
+POST http://localhost:5000/api/mcp
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {},
+    "clientInfo": {
+      "name": "test-client",
+      "version": "1.0.0"
+    }
+  }
+}
+
+###
+
+### Test MCP Protocol Compatible Request - Tools List
+POST http://localhost:5000/api/mcp
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/list"
+}
+
+###
+
+### Test MCP Protocol Compatible Request - Tools Call
+POST http://localhost:5000/api/mcp
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call",
+  "params": {
+    "name": "search_customer_orders",
+    "arguments": {
+      "take": 3,
+      "skip": 0,
+      "keyword": "test"
+    }
+  }
+}
+
+###
+
+### Test Direct VirtoCommerce API (for comparison)
+POST http://localhost:5000/api/order/customerOrders/search
+Content-Type: application/json
+# Authorization: Bearer YOUR_TOKEN_HERE
+
+{
+  "take": 5,
+  "skip": 0,
+  "sort": "createdDate:desc"
+}

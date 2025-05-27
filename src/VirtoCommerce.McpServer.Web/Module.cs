@@ -50,6 +50,10 @@ public class Module : IModule, IHasConfiguration
         serviceCollection.AddSingleton<IModuleManifestService, ModuleManifestService>();
         serviceCollection.AddSingleton<IApiDiscoveryService, ApiDiscoveryService>();
 
+        // Register HTTP client and context accessor for API calls
+        serviceCollection.AddHttpClient();
+        serviceCollection.AddHttpContextAccessor();
+
         // Register MCP server service
         serviceCollection.AddSingleton<McpServerService>();
         serviceCollection.AddHostedService(sp => sp.GetRequiredService<McpServerService>());

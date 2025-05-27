@@ -1,0 +1,58 @@
+{
+  "name": "VirtoCommerce.Orders.GraphQL",
+  "version": "1.0.0",
+  "description": "MCP tools for VirtoCommerce Order GraphQL API",
+  "tools": [
+    {
+      "name": "search_orders_graphql",
+      "description": "Search orders using GraphQL with customizable field selection",
+      "type": "graphql",
+      "endpoint": "http://localhost:5000/graphql",
+      "query": "{ orders { totalCount items { id status number createdDate modifiedDate customerId customerName shipments { id status shipmentMethodCode shipmentMethodOption total { amount } } addresses { id firstName lastName line1 countryName countryCode postalCode } total { amount } subTotal { amount } discountTotal { amount } } } }",
+      "parameters": {
+        "first": {
+          "type": "integer",
+          "description": "Number of orders to return",
+          "default": 20
+        },
+        "fields": {
+          "type": "array",
+          "description": "Specific fields to return (overrides default selection)",
+          "items": {
+            "type": "string"
+          },
+          "required": false
+        },
+        "fieldSet": {
+          "type": "string",
+          "description": "Predefined field set: minimal, standard, detailed, full",
+          "enum": ["minimal", "standard", "detailed", "full"],
+          "required": false
+        }
+      },
+              "fieldSets": {
+          "minimal": ["id", "number", "status"],
+          "standard": ["id", "status", "number", "createdDate", "customerId", "customerName", "total"],
+          "detailed": ["id", "status", "number", "createdDate", "modifiedDate", "customerId", "customerName", "total", "subTotal", "discountTotal"],
+          "full": ["id", "status", "number", "createdDate", "modifiedDate", "customerId", "customerName", "shipments", "addresses", "total", "subTotal", "discountTotal"]
+        },
+        "defaultFields": ["id", "status", "number", "createdDate", "customerId", "customerName", "total"],
+      "auth": {
+        "type": "bearer",
+        "required": true
+      }
+    },
+    {
+      "name": "graphql_introspection",
+      "description": "Get GraphQL schema information to understand available fields",
+      "type": "graphql",
+      "endpoint": "http://localhost:5000/graphql",
+      "query": "query { __schema { types { name fields { name type { name } } } } }",
+      "parameters": {},
+      "auth": {
+        "type": "bearer",
+        "required": true
+      }
+    }
+  ]
+}

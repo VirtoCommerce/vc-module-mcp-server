@@ -36,19 +36,19 @@ Claude Desktop ←→ mcp-remote proxy ←→ VirtoCommerce Web Module
    ```
 
 2. Update your Claude Desktop configuration file (`claude_desktop_config.json`):
-   ```json
-   {
-     "mcpServers": {
-       "virtocommerce": {
+```json
+{
+  "mcpServers": {
+    "virtocommerce": {
          "command": "npx",
          "args": [
            "mcp-remote",
            "http://localhost:5000/api/mcp"
          ]
-       }
-     }
-   }
-   ```
+    }
+  }
+}
+```
 
 3. Restart Claude Desktop
 
@@ -107,7 +107,7 @@ public async Task<string> GetCustomer(
     var result = await _mcpServerService.ExecuteToolAsync("get_customer", arguments, cancellationToken);
     return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
 }
-```
+   ```
 
 ### Project Structure
 
